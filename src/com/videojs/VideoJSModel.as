@@ -18,9 +18,12 @@ package com.videojs{
     import flash.media.SoundMixer;
     import flash.media.SoundTransform;
     import flash.media.Video;
+    import flash.system.Security;
     import flash.utils.ByteArray;
     
     public class VideoJSModel extends EventDispatcher{
+
+        private const RESTRICT_SRC_DOMAIN_ERROR:String = "Source domain is outside of page domain";
 
         private var _masterVolume:SoundTransform;
         private var _currentPlaybackType:String;
@@ -39,6 +42,7 @@ package com.videojs{
         private var _autoplay:Boolean = false;
         private var _preload:Boolean = false;
         private var _loop:Boolean = false;
+        private var _restrictSrcDomain:Boolean = false;
         private var _src:String = "";
         private var _rtmpConnectionURL:String = "";
         private var _rtmpStream:String = "";
@@ -190,6 +194,20 @@ package com.videojs{
             _autoplay = pValue;
         }
         
+        private function validateRestrictedSrcDomain(srcUrl:String):Boolean {
+            if (!_restrictSrcDomain) {
+                return true;
+            }
+            if (!srcUrl) {
+                return true;
+            }
+            var pageContext:String = Security.pageDomain;
+            var domainRegex:RegExp = new RegExp("^(.*://)?([^/]+)");
+            var srcDomain = srcUrl.match(domainRegex)[2];
+            var pageDomain = pageContext.match(domainRegex)[2];
+            return (srcDomain == pageDomain);
+        }
+        
         public function get src():String{
             if(_provider){
                 return _provider.srcAsString;
@@ -227,6 +245,10 @@ package com.videojs{
             _rtmpStream = pValue;
             broadcastEventExternally(ExternalEventName.ON_SRC_CHANGE, _src);
             if (_provider != null && _currentPlaybackType == PlaybackType.RTMP) {
+                if (!validateRestrictedSrcDomain(_rtmpStream)) {
+                    broadcastErrorEventExternally(RESTRICT_SRC_DOMAIN_ERROR);
+                    return;
+                }
                 var __src:Object = {
                     connectionURL: _rtmpConnectionURL,
                     streamURL: _rtmpStream
@@ -338,6 +360,13 @@ package com.videojs{
         }
         public function set loop(pValue:Boolean):void {
             _loop = pValue;
+        }
+        
+        public function get restrictSrcDomain():Boolean{
+            return _restrictSrcDomain;
+        }
+        public function set restrictSrcDomain(pValue:Boolean):void {
+            _restrictSrcDomain = pValue;
         }
         
         public function get buffered():Number{
@@ -565,6 +594,10 @@ package com.videojs{
                 case PlayerMode.VIDEO:
                     
                     if(_currentPlaybackType == PlaybackType.HTTP){
+                        if (!validateRestrictedSrcDomain(_src)) {
+                            broadcastErrorEventExternally(RESTRICT_SRC_DOMAIN_ERROR);
+                            return;
+                        }
                         __src = {
                             path: _src
                         };
@@ -573,6 +606,10 @@ package com.videojs{
                         _provider.init(__src, _autoplay);
                     }
                     else if(_currentPlaybackType == PlaybackType.RTMP){
+                        if (!validateRestrictedSrcDomain(_rtmpConnectionURL) || !validateRestrictedSrcDomain(_rtmpStream)) {
+                            broadcastErrorEventExternally(RESTRICT_SRC_DOMAIN_ERROR);
+                            return;
+                        }
                         __src = {
                             connectionURL: _rtmpConnectionURL,
                             streamURL: _rtmpStream
@@ -584,6 +621,10 @@ package com.videojs{
                     
                     break;
                 case PlayerMode.AUDIO:
+                    if (!validateRestrictedSrcDomain(_src)) {
+                        broadcastErrorEventExternally(RESTRICT_SRC_DOMAIN_ERROR);
+                        return;
+                    }
                     __src = {
                         path:_src
                     };

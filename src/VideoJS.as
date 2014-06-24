@@ -25,6 +25,7 @@ package{
     public class VideoJS extends Sprite{
 
         public const VERSION:String = CONFIG::version;
+        private const RESTRICT_SRC_DOMAIN:String = CONFIG::restrictSrcDomain;
         
         private var _app:VideoJSApp;
         private var _stageSizeTimer:Timer;
@@ -53,6 +54,10 @@ package{
             addChild(_app);
 
             _app.model.stageRect = new Rectangle(0, 0, stage.stageWidth, stage.stageHeight);
+            
+            if (RESTRICT_SRC_DOMAIN == "true") {
+                _app.model.restrictSrcDomain = true;
+            }
 
             // add content-menu version info
 

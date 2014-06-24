@@ -211,6 +211,11 @@ module.exports = function (grunt) {
       }
 
       cmdLineOpts.push('-define=CONFIG::version, "' + pkg.version + '"');
+      var restrictSrcDomain = false;
+      if (grunt.option("restrictSrcDomain")) {
+         restrictSrcDomain = grunt.option("restrictSrcDomain");
+      }
+      cmdLineOpts.push('-define=CONFIG::restrictSrcDomain, "' + grunt.option("restrictSrcDomain") + '"');
       cmdLineOpts.push('--');
       cmdLineOpts.push.apply(cmdLineOpts, srcList);
 
